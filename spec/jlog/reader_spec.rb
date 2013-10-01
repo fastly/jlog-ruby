@@ -15,7 +15,7 @@ describe "JLog::Reader" do
     writer.close
   end
 
-  it "should be able to open a reader on a log" do
+  it "should be able to access a reader subscribed to a log" do
     reader.open('TestSub')
     reader.close
   end
@@ -32,6 +32,18 @@ describe "JLog::Reader" do
   end
 
   it "should be able to rewind" do
+    reader.open('TestSub')
+    res1 = reader.read
+    reader.rewind
+    res2 = reader.read
+
+    assert_equal res1, res2, "Messages do not match"
+
+    reader.checkpoint
+    reader.close
+  end
+
+  it "should be able to checkpoint" do
     reader.open('TestSub')
     res1 = reader.read
     reader.checkpoint
