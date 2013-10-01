@@ -9,7 +9,7 @@ describe 'JLog::Writer' do
     writer.close
   end
 
-  it "should be able to wrote to an open log" do
+  it "should be able to write to an open log" do
     writer.open
 
     1.upto(10) do |n|
