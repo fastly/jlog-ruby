@@ -20,7 +20,32 @@ Or install it yourself as:
 
 ## Usage
 
-TODO: Write usage instructions here
+```ruby
+log = JLog.new('/var/log/logname')
+log.add_subscriber 'LogSubscriber'
+log.close
+
+writer = JLog::Writer.new('/var/log/logname')
+
+writer.open
+writer.write 'This is the first log message'
+writer.write 'This is the second log message'
+writer.close
+
+reader = JLog::Reader.new '/var/log/logname'
+reader.open 'LogSubscriber'
+first = reader.read
+second = reader.read
+reader.rewind
+
+if reader.read == second
+  puts "Yeah, dude!"
+else
+  puts "No, bro!"
+end
+
+reader.close
+```
 
 ## Requirements
 
