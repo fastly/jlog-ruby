@@ -1,5 +1,5 @@
-#include "ruby.h"
-#include "jlog.h"
+#include <ruby.h>
+#include <jlog.h>
 #include "fcntl.h"
 #include <stdio.h>
 #include <sys/time.h>
@@ -300,17 +300,10 @@ VALUE rJLog_W_open(VALUE self)
    return Qtrue;
 }
 
-//VALUE rJLog_W_write(int argc, VALUE *argv, VALUE self)
 VALUE rJLog_W_write(VALUE self, VALUE msg)
 {
-//   VALUE msg;
-//   VALUE ts;
    int err;
-//   jlog_message m;
-//   struct timeval t;
    JLog_Writer jo;
-
-//   rb_scan_args(argc, argv, "10", &msg, &ts);
 
    Data_Get_Struct(self, jlog_obj, jo);
 
@@ -321,20 +314,6 @@ VALUE rJLog_W_write(VALUE self, VALUE msg)
 #if !defined(RSTRING_LEN)
 #  define RSTRING_LEN(x) (RSTRING(x)->len)
 #endif
-/*
-   if(!NIL_P(ts)) {
-      t.tv_sec = (time_t) NUM2INT(ts);
-      t.tv_usec = 0;
-   } else {
-      gettimeofday(&t, NULL);
-   }
-
-   m.mess = StringValuePtr(msg);
-   m.mess_len = RSTRING_LEN(msg);
-
-   //XXX Implement write_message as an optional call if ts is not nil
-   //if((err = jlog_ctx_write_message(jo->ctx, &m, ts ? &t : NULL)) < 0) {
-*/
    rb_warning("1");
    err = jlog_ctx_write(jo->ctx, StringValuePtr(msg), (size_t) RSTRING_LEN(msg));
    rb_warning("2");
