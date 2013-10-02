@@ -1,12 +1,12 @@
 require 'spec_helper'
 
-describe "JLog::Reader" do
-  let(:jlog)   { JLog.new('/tmp/junit.log') }
-  let(:reader) { JLog::Reader.new('/tmp/junit.log') }
+describe "Jlog::Reader" do
+  let(:jlog)   { Jlog.new('/tmp/junit.log') }
+  let(:reader) { Jlog::Reader.new('/tmp/junit.log') }
 
   before do
     jlog.add_subscriber('TestSub')
-    writer = JLog::Writer.new('/tmp/junit.log')
+    writer = Jlog::Writer.new('/tmp/junit.log')
 
     writer.open
     1.upto(10) do |n|
@@ -25,7 +25,7 @@ describe "JLog::Reader" do
     first_entry = reader.read
     reader.close
 
-    reader = JLog::Reader.new('/tmp/junit.log')
+    reader = Jlog::Reader.new('/tmp/junit.log')
     reader.open('TestSub')
     assert_equal first_entry, reader.read, "Message wasn't appropriately checkpointed"
     reader.close

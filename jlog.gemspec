@@ -5,7 +5,7 @@ require 'jlog/version'
 
 Gem::Specification.new do |spec|
   spec.name          = "jlog"
-  spec.version       = JLog::VERSION
+  spec.version       = Jlog::VERSION
   spec.authors       = ["Ezekiel Templin"]
   spec.email         = ["zeke@templ.in"]
   spec.description   = %q{Ruby C-extension for JLog}

@@ -1,10 +1,10 @@
 require 'spec_helper'
 
-describe 'JLog' do
-  let(:jlog) { JLog.new('/tmp/junit.log') }
+describe 'Jlog' do
+  let(:jlog) { Jlog.new('/tmp/junit.log') }
 
   it "should work" do
-    assert_kind_of JLog, jlog, "JLog Object creation failed"
+    assert_kind_of Jlog, jlog, "JLog Object creation failed"
     jlog.close
   end
 
@@ -28,7 +28,7 @@ describe 'JLog' do
     jlog.remove_subscriber("TestSubRemove")
     jlog.close
 
-    jlog = JLog.new('/tmp/junit.log')
+    jlog = Jlog.new('/tmp/junit.log')
     jlog.list_subscribers.each do |s|
       refute_equal "TestSubRemove", s, "Test Subscriber was not removed"
     end

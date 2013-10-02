@@ -1,6 +1,6 @@
 #include <ruby.h>
 #include <jlog.h>
-#include "fcntl.h"
+#include <fcntl.h>
 #include <stdio.h>
 #include <sys/time.h>
 
@@ -15,53 +15,49 @@ typedef struct {
    int error;
 } jlog_obj;
 
-typedef jlog_obj * JLog;
-typedef jlog_obj * JLog_Writer;
-typedef jlog_obj * JLog_Reader;
+typedef jlog_obj * Jlog;
+typedef jlog_obj * Jlog_Writer;
+typedef jlog_obj * Jlog_Reader;
 
-VALUE cJLog;
-VALUE cJLogWriter;
-VALUE cJLogReader;
-VALUE eJLog;
+VALUE cJlog;
+VALUE cJlogWriter;
+VALUE cJlogReader;
+VALUE eJlog;
 
-void rJLog_populate_subscribers(VALUE);
+void rJlog_populate_subscribers(VALUE);
 
-void rJLog_mark(JLog jo) {
-}
+void rJlog_mark(Jlog jo) { }
 
-void rJLog_free(JLog jo) {
+void rJlog_free(Jlog jo) {
    if(jo->ctx) {
       jlog_ctx_close(jo->ctx);
    }
 
-   rb_warning("(rJLog_free) Freeing path");
+   rb_warning("(rJlog_free) Freeing path");
    if(jo->path) {
       xfree(jo->path);
    }
 
    if(jo) {
-     rb_warning("(rJLog_free) Freeing jo");
+     rb_warning("(rJlog_free) Freeing jo");
      xfree(jo);
    }
 }
 
-void rJLog_raise(JLog jo, char* mess)
+void rJlog_raise(Jlog jo, const char* mess)
 {
-   VALUE e = rb_exc_new2(eJLog, mess);
+   VALUE e = rb_exc_new2(eJlog, mess);
    rb_iv_set(e, "error", INT2FIX(jlog_ctx_err(jo->ctx)));
    rb_iv_set(e, "errstr", rb_str_new2(jlog_ctx_err_string(jo->ctx)));
    rb_iv_set(e, "errno", INT2FIX(jlog_ctx_errno(jo->ctx)));
 
-   rb_raise(eJLog, "%s: %d %s", mess, jlog_ctx_err(jo->ctx),
-                               jlog_ctx_err_string(jo->ctx));
-
-   //rb_exc_raise(e);
+   rb_raise(eJlog, "%s: %d %s", mess, jlog_ctx_err(jo->ctx), jlog_ctx_err_string(jo->ctx));
 }
 
-VALUE rJLog_initialize(int argc, VALUE* argv, VALUE klass) 
+VALUE rJlog_initialize(int argc, VALUE* argv, VALUE klass) 
 {
    int options;
-   JLog jo;
+   Jlog jo;
    jlog_id zeroed = {0,0};
    VALUE path;
    VALUE optarg;
@@ -97,55 +93,55 @@ VALUE rJLog_initialize(int argc, VALUE* argv, VALUE klass)
 
    rb_warning("(init) Testing object creation");
    if(!jo->ctx) {
-      rJLog_free(jo);
-      rb_raise(eJLog, "jlog_new(%s) failed", StringValuePtr(path));
+      rJlog_free(jo);
+      rb_raise(eJlog, "jlog_new(%s) failed", StringValuePtr(path));
    }
 
    rb_warning("(init) Handling jlog creation");
    if(options & O_CREAT) {
-      rb_warning("(init) Initializing JLog context");
+      rb_warning("(init) Initializing Jlog context");
       if(jlog_ctx_init(jo->ctx) != 0) {
          if(jlog_ctx_err(jo->ctx) == JLOG_ERR_CREATE_EXISTS) {
             if(options & O_EXCL) {
                rb_warning("(init) O_EXCL - Trying to free the object");
-               rJLog_free(jo);
-               rb_raise(eJLog, "file already exists: %s", StringValuePtr(path));
+               rJlog_free(jo);
+               rb_raise(eJlog, "file already exists: %s", StringValuePtr(path));
             }
          }else {
-            rJLog_raise(jo, "Error initializing jlog");
+            rJlog_raise(jo, "Error initializing jlog");
          }
       }
-      rb_warning("(init) Closing JLog");
+      rb_warning("(init) Closing Jlog");
       jlog_ctx_close(jo->ctx);
       jo->ctx = jlog_new(StringValuePtr(path));
       if(!jo->ctx) {
-         rJLog_free(jo);
-         rb_raise(eJLog, "jlog_new(%s) failed after successful init", StringValuePtr(path));
+         rJlog_free(jo);
+         rb_raise(eJlog, "jlog_new(%s) failed after successful init", StringValuePtr(path));
       }
       rb_warning("(init) Populate Subscribers");
-      rJLog_populate_subscribers(klass);
+      rJlog_populate_subscribers(klass);
    } 
 
    if(!jo) { 
-      rb_raise(eJLog, "jo wasn't initialized.");
+      rb_raise(eJlog, "jo wasn't initialized.");
    }
 
    return klass;
 }
 
-static VALUE rJLog_s_alloc(VALUE klass)
+static VALUE rJlog_s_alloc(VALUE klass)
 {
-   JLog jo = ALLOC(jlog_obj);
+   Jlog jo = ALLOC(jlog_obj);
 
-   return Data_Wrap_Struct(klass, rJLog_mark, rJLog_free, jo);
+   return Data_Wrap_Struct(klass, rJlog_mark, rJlog_free, jo);
 }
 
-VALUE rJLog_add_subscriber(int argc, VALUE* argv, VALUE self)
+VALUE rJlog_add_subscriber(int argc, VALUE* argv, VALUE self)
 {
    VALUE s;
    VALUE w;
    long whence;
-   JLog jo;
+   Jlog jo;
 
    rb_scan_args(argc, argv, "11", &s, &w);
 
@@ -161,42 +157,41 @@ VALUE rJLog_add_subscriber(int argc, VALUE* argv, VALUE self)
       return Qfalse;
    }
 
-   rJLog_populate_subscribers(self);
+   rJlog_populate_subscribers(self);
 
    return Qtrue;
 }
 
 
-VALUE rJLog_remove_subscriber(VALUE self, VALUE subscriber)
+VALUE rJlog_remove_subscriber(VALUE self, VALUE subscriber)
 {
-   JLog jo;
+   Jlog jo;
 
    Data_Get_Struct(self, jlog_obj, jo);
    int res = jlog_ctx_remove_subscriber(jo->ctx, StringValuePtr(subscriber));
    if(!jo || !jo->ctx || res != 0)
    {
       rb_warning(stderr, "\nResult of remove command is %d\n", res);
-      //rb_raise(eJLog, "FAILED");
       return res;
    }
 
-   rJLog_populate_subscribers(self);
+   rJlog_populate_subscribers(self);
 
    return Qtrue;
 }
 
-void rJLog_populate_subscribers(VALUE self)
+void rJlog_populate_subscribers(VALUE self)
 {
    char **list;
    int i;
-   JLog jo;
+   Jlog jo;
    VALUE subscribers = rb_ary_new();
 
    Data_Get_Struct(self, jlog_obj, jo);
 
    if(!jo || !jo->ctx)
    {
-      rb_raise(eJLog, "Invalid jlog context");
+      rb_raise(eJlog, "Invalid jlog context");
    }
 
    jlog_ctx_list_subscribers(jo->ctx, &list);
@@ -210,40 +205,40 @@ void rJLog_populate_subscribers(VALUE self)
    rb_iv_set(self, "@subscribers", subscribers);
 }
 
-VALUE rJLog_list_subscribers(VALUE self)
+VALUE rJlog_list_subscribers(VALUE self)
 {
-   JLog jo;
+   Jlog jo;
 
    Data_Get_Struct(self, jlog_obj, jo);
 
    if(!jo || !jo->ctx)
    {
-      rb_raise(eJLog, "Invalid jlog context");
+      rb_raise(eJlog, "Invalid jlog context");
    }
 
-//   rJLog_populate_subscribers(self);
+//   rJlog_populate_subscribers(self);
 
    return rb_iv_get(self, "@subscribers");
 }
 
-VALUE rJLog_raw_size(VALUE self)
+VALUE rJlog_raw_size(VALUE self)
 {
    size_t size;
-   JLog jo;
+   Jlog jo;
 
    Data_Get_Struct(self, jlog_obj, jo);
 
    if(!jo || !jo->ctx) {
-      rb_raise(eJLog, "Invalid jlog context");
+      rb_raise(eJlog, "Invalid jlog context");
    }
    size = jlog_raw_size(jo->ctx);
 
    return INT2NUM(size);
 }
 
-VALUE rJLog_close(VALUE self)
+VALUE rJlog_close(VALUE self)
 {
-   JLog jo;
+   Jlog jo;
 
    Data_Get_Struct(self, jlog_obj, jo);
 
@@ -255,9 +250,9 @@ VALUE rJLog_close(VALUE self)
    return Qtrue;
 }
 
-VALUE rJLog_inspect(VALUE self)
+VALUE rJlog_inspect(VALUE self)
 {
-   JLog jo;
+   Jlog jo;
 
    Data_Get_Struct(self, jlog_obj, jo);
 
@@ -268,47 +263,47 @@ VALUE rJLog_inspect(VALUE self)
    return Qtrue;
 }
 
-VALUE rJLog_destroy(VALUE self)
+VALUE rJlog_destroy(VALUE self)
 {
-   JLog jo;
+   Jlog jo;
 
    Data_Get_Struct(self, jlog_obj, jo);
 
    if(!jo) return Qnil;
 
-   rJLog_free(jo);
+   rJlog_free(jo);
 
    return Qtrue;
 }
 
-VALUE rJLog_W_open(VALUE self)
+VALUE rJlog_W_open(VALUE self)
 {
-   JLog_Writer jo;
+   Jlog_Writer jo;
 
    rb_warning("(W_open) Get and check context...");
    Data_Get_Struct(self, jlog_obj, jo);
 
    if(!jo || !jo->ctx) {
-      rb_raise(eJLog, "Invalid jlog context");
+      rb_raise(eJlog, "Invalid jlog context");
    }
 
    rb_warning("(W_open) Opening jlog for write.");
    if(jlog_ctx_open_writer(jo->ctx) != 0) {
-      rJLog_raise(jo, "jlog_ctx_open_writer failed");
+      rJlog_raise(jo, "jlog_ctx_open_writer failed");
    }
 
    return Qtrue;
 }
 
-VALUE rJLog_W_write(VALUE self, VALUE msg)
+VALUE rJlog_W_write(VALUE self, VALUE msg)
 {
    int err;
-   JLog_Writer jo;
+   Jlog_Writer jo;
 
    Data_Get_Struct(self, jlog_obj, jo);
 
    if(!jo || !jo->ctx) {
-      rb_raise(eJLog, "Invalid jlog context");
+      rb_raise(eJlog, "Invalid jlog context");
    }
 
 #if !defined(RSTRING_LEN)
@@ -327,15 +322,15 @@ VALUE rJLog_W_write(VALUE self, VALUE msg)
 }
 
 
-VALUE rJLog_R_open(VALUE self, VALUE subscriber)
+VALUE rJlog_R_open(VALUE self, VALUE subscriber)
 {
-   JLog_Reader jo;
+   Jlog_Reader jo;
    int err;
 
    Data_Get_Struct(self, jlog_obj, jo);
 
    if(!jo || !jo->ctx) {
-      rb_raise(eJLog, "Invalid jlog context");
+      rb_raise(eJlog, "Invalid jlog context");
    }
 
    rb_warning("(JR::open) Opening %s", (char *) StringValuePtr(subscriber));
@@ -343,25 +338,25 @@ VALUE rJLog_R_open(VALUE self, VALUE subscriber)
 
    if(err != 0) {
       rb_warning("(JR::open) open failed (%d) %s!", jlog_ctx_err(jo->ctx), jlog_ctx_err_string(jo->ctx));
-      rJLog_raise(jo, "jlog_ctx_open_reader failed");
+      rJlog_raise(jo, "jlog_ctx_open_reader failed");
    }
 
    return Qtrue;
 }
 
 
-VALUE rJLog_R_read(VALUE self)
+VALUE rJlog_R_read(VALUE self)
 {
    const jlog_id epoch = {0, 0};
    jlog_id cur = {0, 0};
    jlog_message message;
    int cnt;
-   JLog_Reader jo;
+   Jlog_Reader jo;
 
    Data_Get_Struct(self, jlog_obj, jo);
 
    if(!jo || !jo->ctx) {
-      rb_raise(eJLog, "Invalid jlog context");
+      rb_raise(eJlog, "Invalid jlog context");
    }
 
    rb_warning("(JR::read) Check start");
@@ -376,7 +371,7 @@ VALUE rJLog_R_read(VALUE self)
          return Qnil;
       }
       else if(cnt == -1)
-         rJLog_raise(jo, "jlog_ctx_read_interval_failed");
+         rJlog_raise(jo, "jlog_ctx_read_interval_failed");
    }
 
    rb_warning("(JR::read) Check last");
@@ -403,19 +398,19 @@ VALUE rJLog_R_read(VALUE self)
    if(jlog_ctx_read_message(jo->ctx, &cur, &message) != 0) {
       if(jlog_ctx_err(jo->ctx) == JLOG_ERR_FILE_OPEN) {
          jo->error = 1;
-         rJLog_raise(jo, "jlog_ctx_read_message failed");
+         rJlog_raise(jo, "jlog_ctx_read_message failed");
          return Qnil;
       }
 
       // read failed; raise error but recover if read is retried
       jo->error = 1;
-      rJLog_raise(jo, "read failed");
+      rJlog_raise(jo, "read failed");
    }
 
    rb_warning("(JR::read) Handle Autocheckpoint");
    if(jo->auto_checkpoint) {
       if(jlog_ctx_read_checkpoint(jo->ctx, &cur) != 0)
-         rJLog_raise(jo, "checkpoint failed");
+         rJlog_raise(jo, "checkpoint failed");
 
       // must reread the interval after a checkpoint
       jo->last = epoch;
@@ -428,19 +423,19 @@ VALUE rJLog_R_read(VALUE self)
       jo->last = cur;
    }
 
-   rb_warning("(JR::read) Returning: %s", message.mess);
+   rb_warning("(JR::read) Returning: %p", message.mess);
    return rb_str_new2(message.mess);
 }
 
 
-VALUE rJLog_R_rewind(VALUE self)
+VALUE rJlog_R_rewind(VALUE self)
 {
-   JLog_Reader jo;
+   Jlog_Reader jo;
 
    Data_Get_Struct(self, jlog_obj, jo);
 
    if(!jo || !jo->ctx) {
-      rb_raise(eJLog, "Invalid jlog context");
+      rb_raise(eJlog, "Invalid jlog context");
    }
 
    jo->last = jo->prev;
@@ -449,15 +444,15 @@ VALUE rJLog_R_rewind(VALUE self)
 }
 
 
-VALUE rJLog_R_checkpoint(VALUE self)
+VALUE rJlog_R_checkpoint(VALUE self)
 {
    jlog_id epoch = { 0, 0 };
-   JLog_Reader jo;
+   Jlog_Reader jo;
 
    Data_Get_Struct(self, jlog_obj, jo);
 
    if(!jo || !jo->ctx) {
-      rb_raise(eJLog, "Invalid jlog context");
+      rb_raise(eJlog, "Invalid jlog context");
    }
 
    if(memcmp(&jo->last, &epoch, sizeof(jlog_id)))
@@ -474,14 +469,14 @@ VALUE rJLog_R_checkpoint(VALUE self)
 }
 
 
-VALUE rJLog_R_auto_checkpoint(int argc, VALUE *argv, VALUE self)
+VALUE rJlog_R_auto_checkpoint(int argc, VALUE *argv, VALUE self)
 {
-   JLog jo;
+   Jlog jo;
 
    Data_Get_Struct(self, jlog_obj, jo);
 
    if(!jo || !jo->ctx) {
-      rb_raise(eJLog, "Invalid jlog context");
+      rb_raise(eJlog, "Invalid jlog context");
    }
 
    if(argc > 0) {
@@ -494,49 +489,37 @@ VALUE rJLog_R_auto_checkpoint(int argc, VALUE *argv, VALUE self)
 
 
 void Init_jlog(void) {
-   cJLog = rb_define_class("JLog", rb_cObject);
-   cJLogWriter = rb_define_class_under(cJLog, "Writer", cJLog);
-   cJLogReader = rb_define_class_under(cJLog, "Reader", cJLog);
+   cJlog = rb_define_class("Jlog", rb_cObject);
+   cJlogWriter = rb_define_class_under(cJlog, "Writer", cJlog);
+   cJlogReader = rb_define_class_under(cJlog, "Reader", cJlog);
 
-   eJLog = rb_define_class_under(cJLog, "Error", rb_eStandardError);
+   eJlog = rb_define_class_under(cJlog, "Error", rb_eStandardError);
 
-//   rb_define_singleton_method(cJLog, "new", rJLog_new, -1);
-   rb_define_method(cJLog, "initialize", rJLog_initialize, -1);
-   rb_define_alloc_func(cJLog, rJLog_s_alloc);
+   rb_define_method(cJlog, "initialize", rJlog_initialize, -1);
+   rb_define_alloc_func(cJlog, rJlog_s_alloc);
 
-   rb_define_method(cJLog, "add_subscriber", rJLog_add_subscriber, -1);
-   rb_define_method(cJLog, "remove_subscriber", rJLog_remove_subscriber, 1);
-   rb_define_method(cJLog, "list_subscribers", rJLog_list_subscribers, 0);
-   rb_define_method(cJLog, "raw_size", rJLog_raw_size, 0);
-   rb_define_method(cJLog, "close", rJLog_close, 0);
+   rb_define_method(cJlog, "add_subscriber", rJlog_add_subscriber, -1);
+   rb_define_method(cJlog, "remove_subscriber", rJlog_remove_subscriber, 1);
+   rb_define_method(cJlog, "list_subscribers", rJlog_list_subscribers, 0);
+   rb_define_method(cJlog, "raw_size", rJlog_raw_size, 0);
+   rb_define_method(cJlog, "close", rJlog_close, 0);
+   rb_define_method(cJlog, "destroy", rJlog_destroy, 0);
+   rb_define_method(cJlog, "inspect", rJlog_inspect, 0);
 
-   rb_define_method(cJLog, "destroy", rJLog_destroy, 0);
-   rb_define_method(cJLog, "inspect", rJLog_inspect, 0);
+   rb_define_alias(cJlog, "size", "raw_size");
 
-   rb_define_alias(cJLog, "size", "raw_size");
+   rb_define_method(cJlogWriter, "initialize", rJlog_initialize, -1);
+   rb_define_alloc_func(cJlogWriter, rJlog_s_alloc);
 
-//   rb_define_singleton_method(cJLogWriter, "new", rJLog_new, -1);
-   rb_define_method(cJLogWriter, "initialize", rJLog_initialize, -1);
-   rb_define_alloc_func(cJLogWriter, rJLog_s_alloc);
+   rb_define_method(cJlogWriter, "open", rJlog_W_open, 0);
+   rb_define_method(cJlogWriter, "write", rJlog_W_write, 1);
 
-   rb_define_method(cJLogWriter, "open", rJLog_W_open, 0);
-   //rb_define_method(cJLogWriter, "write", rJLog_W_write, -1);
-   rb_define_method(cJLogWriter, "write", rJLog_W_write, 1);
+   rb_define_method(cJlogReader, "initialize", rJlog_initialize, -1);
+   rb_define_alloc_func(cJlogReader, rJlog_s_alloc);
 
-//   rb_define_singleton_method(cJLogReader, "new", rJLog_new, -1);
-   rb_define_method(cJLogReader, "initialize", rJLog_initialize, -1);
-   rb_define_alloc_func(cJLogReader, rJLog_s_alloc);
-
-   rb_define_method(cJLogReader, "open", rJLog_R_open, 1);
-   rb_define_method(cJLogReader, "read", rJLog_R_read, 0);
-   rb_define_method(cJLogReader, "rewind", rJLog_R_rewind, 0);
-   rb_define_method(cJLogReader, "checkpoint", rJLog_R_checkpoint, 0);
-   rb_define_method(cJLogReader, "auto_checkpoint", rJLog_R_auto_checkpoint, -1);
+   rb_define_method(cJlogReader, "open", rJlog_R_open, 1);
+   rb_define_method(cJlogReader, "read", rJlog_R_read, 0);
+   rb_define_method(cJlogReader, "rewind", rJlog_R_rewind, 0);
+   rb_define_method(cJlogReader, "checkpoint", rJlog_R_checkpoint, 0);
+   rb_define_method(cJlogReader, "auto_checkpoint", rJlog_R_auto_checkpoint, -1);
 }
-
-
-/* ErrorType message, p 
- * message "; error: %d (%s) errno: %d (%s)",
- * jlog_ctx_err(p->ctx), jlog_ctx_err_string(p->ctx), jlog_ctx_errno(p->ctx), strerror(jlog_ctx_errno(j->ctx))
-*/
-

@@ -1,5 +1,5 @@
 require "jlog/version"
 require "jlog.so"
 
-class JLog
+class Jlog
 end
