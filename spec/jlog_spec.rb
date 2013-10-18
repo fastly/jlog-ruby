@@ -12,15 +12,12 @@ describe 'Jlog' do
     jlog.add_subscriber("TestSub")
     jlog.add_subscriber("TestSubRemove")
 
-    count = 2
-
-    jlog.list_subscribers.each do |s|
-      if s =~ /TestSub(Remove|)/
-        count -= 1
-      end
+    subscribers = jlog.list_subscribers
+    subscribers.delete_if do |sub|
+      sub =~ /^TestSub/
     end
 
-    assert_equal 0, count
+    assert_equal 0, subscribers.size
     jlog.close
   end
 
@@ -33,5 +30,13 @@ describe 'Jlog' do
       refute_equal "TestSubRemove", s, "Test Subscriber was not removed"
     end
     jlog.close
+  end
+
+  it "should be able to see subscribers added by others" do
+    assert_equal 0, jlog.list_subscribers.size
+    new_jlog = Jlog.new('/tmp/junit.log')
+    new_jlog.add_subscriber('NewSubscriber')
+    assert_equal 1, jlog.list_subscribers.size
+    assert_equal 1, new_jlog.list_subscribers.size
   end
 end

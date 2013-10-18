@@ -200,7 +200,7 @@ VALUE rJlog_list_subscribers(VALUE self)
       rb_raise(eJlog, "Invalid jlog context");
    }
 
-//   rJlog_populate_subscribers(self);
+   rJlog_populate_subscribers(self);
 
    return rb_iv_get(self, "@subscribers");
 }
