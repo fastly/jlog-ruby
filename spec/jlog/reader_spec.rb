@@ -56,11 +56,11 @@ describe "Jlog::Reader" do
     reader.open('TestSub')
     res1 = reader.read
     reader.checkpoint
+    reader.rewind
     res2 = reader.read
 
     refute_equal res1, res2, "Checkpointed messages should not match"
 
-    reader.checkpoint
     reader.close
   end
 end
