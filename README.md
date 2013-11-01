@@ -30,20 +30,32 @@ writer = Jlog::Writer.new('/var/log/logname')
 writer.open
 writer.write 'This is the first log message'
 writer.write 'This is the second log message'
+writer.write "This is the third log message, created at #{Time.now}"
 writer.close
 
 reader = Jlog::Reader.new '/var/log/logname'
 reader.open 'LogSubscriber'
+
 first = reader.read
 second = reader.read
 reader.rewind
 
 if reader.read == second
-  puts "Yeah, dude!"
-else
-  puts "No, bro!"
+  puts "Rewind sets log position to last checkpoint."
 end
 
+reader.checkpoint
+
+third = reader.read
+reader.rewind
+third_full = reader.read_message
+
+if third == third_msg[:message]
+  ts = third_msg[:timestamp]
+  puts "#{third} and logged #{Time.at(ts)} (or #{ts} seconds since epoch)"
+end
+
+reader.checkpoint
 reader.close
 ```
 
