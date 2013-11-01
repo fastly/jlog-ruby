@@ -327,7 +327,10 @@ VALUE rJlog_R_read(VALUE self)
    jlog_id cur = {0, 0};
    jlog_message message;
    int cnt;
+   u_int32_t ts;
+   u_int32_t uts;
    Jlog_Reader jo;
+   VALUE message_hash;
 
    Data_Get_Struct(self, jlog_obj, jo);
 
@@ -395,7 +398,14 @@ VALUE rJlog_R_read(VALUE self)
       jo->last = cur;
    }
 
-   return rb_str_new2(message.mess);
+   uts = message.header->tv_usec;
+   ts = message.header->tv_sec;
+   message_hash = rb_hash_new();
+   rb_hash_aset(message_hash, rb_str_new2("message"), rb_str_new2(message.mess));
+   rb_hash_aset(message_hash, rb_str_new2("sec"), rb_int_new(ts));
+   rb_hash_aset(message_hash, rb_str_new2("usec"), rb_int_new(uts));
+
+   return message_hash;
 }
 
 

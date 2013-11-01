@@ -20,6 +20,17 @@ describe "Jlog::Reader" do
     reader.close
   end
 
+  it "should read a hash" do
+    reader.open('TestSub')
+    line = reader.read
+    reader.checkpoint
+    puts line
+    assert_kind_of Hash, line
+    assert_kind_of String, line['message']
+    assert_kind_of Integer, line['usec']
+    assert_kind_of Integer, line['sec']
+  end
+
   it "should read from the proper checkpoint" do
     reader.open('TestSub')
     first_entry = reader.read
