@@ -17,5 +17,6 @@ Rake::ExtensionTask.new do |ext|
   ext.lib_dir = "lib/jlog"
   ext.tmp_dir = "tmp"
   ext.source_pattern = "*.c"
+  ext.config_options << '-Wall'
   ext.gem_spec = spec
 end
