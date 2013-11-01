@@ -8,4 +8,4 @@ task :test do
   Dir.glob('./spec/**/*_spec.rb') { |f| require f }
 end
 
-task :default => :test
+task :default => [:clobber, :compile, :test]
