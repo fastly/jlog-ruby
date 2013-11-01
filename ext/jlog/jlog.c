@@ -153,9 +153,10 @@ VALUE rJlog_add_subscriber(int argc, VALUE* argv, VALUE self)
 VALUE rJlog_remove_subscriber(VALUE self, VALUE subscriber)
 {
    Jlog jo;
+   int res;
 
    Data_Get_Struct(self, jlog_obj, jo);
-   int res = jlog_ctx_remove_subscriber(jo->ctx, StringValuePtr(subscriber));
+   res = jlog_ctx_remove_subscriber(jo->ctx, StringValuePtr(subscriber));
    if(!jo || !jo->ctx || res != 0)
    {
       return res;
