@@ -327,10 +327,7 @@ VALUE rJlog_R_read(VALUE self)
    jlog_id cur = {0, 0};
    jlog_message message;
    int cnt;
-   u_int32_t ts;
-   u_int32_t uts;
    Jlog_Reader jo;
-   VALUE message_hash;
 
    Data_Get_Struct(self, jlog_obj, jo);
 
@@ -398,14 +395,86 @@ VALUE rJlog_R_read(VALUE self)
       jo->last = cur;
    }
 
-   uts = message.header->tv_usec;
-   ts = message.header->tv_sec;
-   message_hash = rb_hash_new();
-   rb_hash_aset(message_hash, rb_str_new2("message"), rb_str_new2(message.mess));
-   rb_hash_aset(message_hash, rb_str_new2("sec"), rb_int_new(ts));
-   rb_hash_aset(message_hash, rb_str_new2("usec"), rb_int_new(uts));
+   return rb_str_new2(message.mess);
+}
 
-   return message_hash;
+VALUE rJlog_R_read_timestamp(VALUE self)
+{
+   const jlog_id epoch = {0, 0};
+   jlog_id cur = {0, 0};
+   jlog_message message;
+   int cnt;
+   double ts;
+   Jlog_Reader jo;
+
+   Data_Get_Struct(self, jlog_obj, jo);
+
+   if(!jo || !jo->ctx) {
+      rb_raise(eJlog, "Invalid jlog context");
+   }
+
+   // If start is unset, read the interval
+   if(jo->error || !memcmp(&jo->start, &epoch, sizeof(jlog_id)))
+   {
+      jo->error = 0;
+      cnt = jlog_ctx_read_interval(jo->ctx, &jo->start, &jo->end);
+      if(cnt == 0 || (cnt == -1 && jlog_ctx_err(jo->ctx) == JLOG_ERR_FILE_OPEN)) {
+         jo->start = epoch;
+         jo->end = epoch;
+         return Qnil;
+      }
+      else if(cnt == -1)
+         rJlog_raise(jo, "jlog_ctx_read_interval_failed");
+   }
+
+   // If last is unset, start at the beginning
+   if(!memcmp(&jo->last, &epoch, sizeof(jlog_id))) {
+      cur = jo->start;
+   } else {
+      // if we've already read the end, return; otherwise advance
+      cur = jo->last;
+      if(!memcmp(&jo->prev, &jo->end, sizeof(jlog_id))) {
+         jo->start = epoch;
+         jo->end = epoch;
+         return Qnil;
+      }
+      jlog_ctx_advance_id(jo->ctx, &jo->last, &cur, &jo->end);
+      if(!memcmp(&jo->last, &cur, sizeof(jlog_id))) {
+            jo->start = epoch;
+            jo->end = epoch;
+            return Qnil;
+      }
+   }
+
+   if(jlog_ctx_read_message(jo->ctx, &cur, &message) != 0) {
+      if(jlog_ctx_err(jo->ctx) == JLOG_ERR_FILE_OPEN) {
+         jo->error = 1;
+         rJlog_raise(jo, "jlog_ctx_read_message failed");
+         return Qnil;
+      }
+
+      // read failed; raise error but recover if read is retried
+      jo->error = 1;
+      rJlog_raise(jo, "read failed");
+   }
+
+   if(jo->auto_checkpoint) {
+      if(jlog_ctx_read_checkpoint(jo->ctx, &cur) != 0)
+         rJlog_raise(jo, "checkpoint failed");
+
+      // must reread the interval after a checkpoint
+      jo->last = epoch;
+      jo->prev = epoch;
+      jo->start = epoch;
+      jo->end = epoch;
+   } else {
+      // update last
+      jo->prev = jo->last;
+      jo->last = cur;
+   }
+
+   ts = message.header->tv_sec+(message.header->tv_usec/1000000.0);
+   return rb_float_new(ts);
 }
 
 
@@ -500,6 +569,7 @@ void Init_jlog(void) {
 
    rb_define_method(cJlogReader, "open", rJlog_R_open, 1);
    rb_define_method(cJlogReader, "read", rJlog_R_read, 0);
+   rb_define_method(cJlogReader, "read_timestamp", rJlog_R_read_timestamp, 0);
    rb_define_method(cJlogReader, "rewind", rJlog_R_rewind, 0);
    rb_define_method(cJlogReader, "checkpoint", rJlog_R_checkpoint, 0);
    rb_define_method(cJlogReader, "auto_checkpoint", rJlog_R_auto_checkpoint, -1);
