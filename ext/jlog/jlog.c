@@ -130,7 +130,7 @@ VALUE rJlog_add_subscriber(int argc, VALUE* argv, VALUE self)
 {
    VALUE s;
    VALUE w;
-   long whence;
+   unsigned int whence;
    Jlog jo;
 
    rb_scan_args(argc, argv, "11", &s, &w);
@@ -138,7 +138,7 @@ VALUE rJlog_add_subscriber(int argc, VALUE* argv, VALUE self)
    if(NIL_P(w)) {
       whence = 0;
    } else {
-      whence = NUM2LONG(w);
+      whence = NUM2UINT(w);
    }
 
    Data_Get_Struct(self, jlog_obj, jo);
