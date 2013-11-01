@@ -22,12 +22,11 @@ describe "Jlog::Reader" do
 
   it "should read a hash" do
     reader.open('TestSub')
-    line = reader.read
-    ts = reader.read_timestamp
+    msg = reader.read_message
     reader.checkpoint
-    puts Time.at(ts)
-    assert_kind_of String, line
-    assert_kind_of Float, ts
+
+    assert_kind_of String, msg[:message]
+    assert_kind_of Float, msg[:timestamp]
   end
 
   it "should read from the proper checkpoint" do

@@ -24,6 +24,9 @@ VALUE cJlogWriter;
 VALUE cJlogReader;
 VALUE eJlog;
 
+static VALUE message_sym;
+static VALUE timestamp_sym;
+
 void rJlog_populate_subscribers(VALUE);
 
 void rJlog_mark(Jlog jo) { }
@@ -398,7 +401,7 @@ VALUE rJlog_R_read(VALUE self)
    return rb_str_new2(message.mess);
 }
 
-VALUE rJlog_R_read_timestamp(VALUE self)
+VALUE rJlog_R_read_message(VALUE self)
 {
    const jlog_id epoch = {0, 0};
    jlog_id cur = {0, 0};
@@ -406,6 +409,7 @@ VALUE rJlog_R_read_timestamp(VALUE self)
    int cnt;
    double ts;
    Jlog_Reader jo;
+   VALUE message_hash;
 
    Data_Get_Struct(self, jlog_obj, jo);
 
@@ -474,7 +478,13 @@ VALUE rJlog_R_read_timestamp(VALUE self)
    }
 
    ts = message.header->tv_sec+(message.header->tv_usec/1000000.0);
-   return rb_float_new(ts);
+
+   message_hash = rb_hash_new();
+   rb_hash_aset(message_hash, message_sym, rb_str_new2(message.mess));
+   rb_hash_aset(message_hash, timestamp_sym, rb_float_new(ts));
+
+   
+   return message_hash;
 }
 
 
@@ -539,6 +549,9 @@ VALUE rJlog_R_auto_checkpoint(int argc, VALUE *argv, VALUE self)
 
 
 void Init_jlog(void) {
+   message_sym = ID2SYM(rb_intern("message"));
+   timestamp_sym = ID2SYM(rb_intern("timestamp"));
+
    cJlog = rb_define_class("Jlog", rb_cObject);
    cJlogWriter = rb_define_class_under(cJlog, "Writer", cJlog);
    cJlogReader = rb_define_class_under(cJlog, "Reader", cJlog);
@@ -569,7 +582,7 @@ void Init_jlog(void) {
 
    rb_define_method(cJlogReader, "open", rJlog_R_open, 1);
    rb_define_method(cJlogReader, "read", rJlog_R_read, 0);
-   rb_define_method(cJlogReader, "read_timestamp", rJlog_R_read_timestamp, 0);
+   rb_define_method(cJlogReader, "read_message", rJlog_R_read_message, 0);
    rb_define_method(cJlogReader, "rewind", rJlog_R_rewind, 0);
    rb_define_method(cJlogReader, "checkpoint", rJlog_R_checkpoint, 0);
    rb_define_method(cJlogReader, "auto_checkpoint", rJlog_R_auto_checkpoint, -1);
